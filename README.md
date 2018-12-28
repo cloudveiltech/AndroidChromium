@@ -1,5 +1,7 @@
 # AndroidChromium
 
+This fork of Android includes an integration with our on demand url and domain filter.
+
 [中文文档](https://github.com/JackyAndroid/AndroidChromium/blob/master/README-CN.md)
 
 ![](https://github.com/JackyAndroid/AndroidChromium/blob/master/app/src/main/res/mipmap-xhdpi/app_icon.png)
