@@ -11,6 +11,7 @@ import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.support.v7.app.AlertDialog;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.TextView;
@@ -159,7 +160,15 @@ public class DataUseTabUIManager {
             return true;
         }
         if (tab.blockUrl(url)) {
-            tab.loadUrl(new LoadUrlParams("http://block.cloudveil.org"));
+            // yes, we need to block this URL
+            byte[] data = null;
+            try {
+                data = url.getBytes("UTF-8");
+            } catch (java.io.UnsupportedEncodingException e1) {
+                e1.printStackTrace();
+            }
+            String base64url = Base64.encodeToString(data, Base64.DEFAULT);
+            tab.loadUrl(new LoadUrlParams("https://manage.cloudveil.org/unblock_request/new_request?category_name=LOOKUP_UNKNOWN&user_id=cv4a&device_name=cv4a&blocked_request=" + base64url));
             return true;
         }
         return false;
