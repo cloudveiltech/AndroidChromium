@@ -110,10 +110,23 @@ import org.chromium.ui.base.ViewAndroidDelegate;
 import org.chromium.ui.base.WindowAndroid;
 import org.chromium.ui.mojom.WindowOpenDisposition;
 
+import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+import java.lang.Thread;
+import android.os.AsyncTask;
+
+import android.support.v7.app.AlertDialog;
+
+import java.net.URI;
+import org.xbill.DNS.*;
+
+import static org.xbill.DNS.SimpleResolver.DEFAULT_PORT;
+//import android.app.AlertDialog;
+//import android.content.DialogInterface;
 /**
  * The basic Java representation of a tab.  Contains and manages a {@link ContentView}.
  * <p>
@@ -373,6 +386,10 @@ public class Tab implements ViewGroup.OnHierarchyChangeListener,
     /** Whether or not the tab closing the tab can send the user back to the app that opened it. */
     private boolean mIsAllowedToReturnToExternalApp;
 
+    // this is for the filtering-DNS
+    public boolean notFirstRun = false;
+    public boolean isBlocked = false;
+
     private class TabContentViewClient extends ContentViewClient {
         @Override
         public void onBackgroundColorChanged(int color) {
@@ -598,6 +615,10 @@ public class Tab implements ViewGroup.OnHierarchyChangeListener,
                         && creationState == TabCreationState.FROZEN_ON_RESTORE;
             }
         }
+
+        if (!notFirstRun) {
+            setupDNS();
+        }
     }
 
     /**
@@ -701,6 +722,204 @@ public class Tab implements ViewGroup.OnHierarchyChangeListener,
         if (getWebContents() != null) {
             getWebContents().getNavigationController().requestRestoreLoad();
         }
+    }
+
+    public void setupDNS() {
+        try {
+            Resolver CVFirstResolver = new SimpleResolver("138.197.159.48");
+            Resolver CVSecondResolver = new SimpleResolver("45.33.17.123");
+            Lookup.setDefaultResolver(new ExtendedResolver(new Resolver[]{
+                    CVFirstResolver, CVSecondResolver }));
+            notFirstRun = true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void prefetchBlock(final String url) {
+        new AsyncTask<String, Void, Void>() {
+            @Override
+            protected Void doInBackground(String... params) {
+                /*getIP(url);*/
+                        try {
+                URI uri = new URI(url);
+                String domain = uri.getHost();
+
+                if (domain.contains("block.cloudveil.org")) {
+                    return null; // this is already a a block so it's OK
+                }
+
+                // dns setup??
+                if (!notFirstRun) {
+                    setupDNS();
+                }
+
+                Lookup lookup = new Lookup(domain);
+
+                long time1 = System.currentTimeMillis();
+                lookup.run();
+                long time2 = System.currentTimeMillis();
+                if (lookup.getResult() == Lookup.SUCCESSFUL) {
+                    if (lookup.getAnswers()[0].rdataToString().contains("45.32.203.129")) {/*
+                        AlertDialog.Builder builder =
+                                new AlertDialog.Builder(getActivity(), R.style.AlertDialogTheme);
+                                     builder.setMessage("block" + " time:" + (time2-time1))
+                                .setCancelable(true);
+                        builder.create();
+                        builder.show();*/
+                        isBlocked = true;
+                        return null;
+                    } else {/*
+                        AlertDialog.Builder builder =
+                                new AlertDialog.Builder(getActivity(), R.style.AlertDialogTheme);
+                        builder.setMessage(lookup.getAnswers()[0].rdataToString() + " time:" + (time2-time1))
+                                .setCancelable(true);
+                        builder.create();
+                        builder.show();*/
+                        return null;
+                    }
+                    /*
+                    AlertDialog.Builder builder =
+                            new AlertDialog.Builder(getActivity(), R.style.AlertDialogTheme);
+                    builder.setMessage(lookup.getAnswers()[0].rdataToString())
+                            .setCancelable(true);
+                    builder.create();
+                    builder.show();*/
+                } else {
+                    AlertDialog.Builder builder =
+                            new AlertDialog.Builder(getActivity(), R.style.AlertDialogTheme);
+                    builder.setMessage( "didn't work: " + domain)
+                            .setCancelable(true);
+                    builder.create();
+                    builder.show();
+                    return null;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+
+                /*AlertDialog.Builder builder =
+                        new AlertDialog.Builder(getActivity(), R.style.AlertDialogTheme);
+                builder.setMessage("crash: "+e.getMessage())
+                        .setCancelable(true);
+                builder.create();
+                builder.show();*/
+
+            }
+            ////
+            AlertDialog.Builder builder =
+                    new AlertDialog.Builder(getActivity(), R.style.AlertDialogTheme);
+            builder.setMessage("crash on DNS lookup!")
+                    .setCancelable(true);
+            builder.create();
+            builder.show();
+            return null;
+            /*if (url.contains("bing")) {
+                return true;
+            } else {
+                return false;
+            }*/
+            }
+
+            @Override
+            protected void onPostExecute(Void result) {
+                isBlocked = false;
+            }
+        }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, url);
+    }
+
+    public boolean blockUrl(String url) {
+//        return isBlocked;
+        /*try {
+            Thread.sleep(26); // simulate the ZVeloDB 24sec answer delay
+        }
+        catch (InterruptedException e)
+        {
+            e.printStackTrace();
+        }*/
+        /////
+        try {
+            URI uri = new URI(url);
+            String domain = uri.getHost();
+
+            if (domain.contains("block.cloudveil.org")) {
+                return false; // this is already a a block so it's OK
+            }
+
+            // dns setup??
+//            if (!notFirstRun) {
+//                setupDNS();
+//            }
+
+                /*
+            Resolver CVFirstResolver = new SimpleResolver("8.8.8.8");//"138.197.159.48");
+            Resolver CVSecondResolver = new SimpleResolver("8.8.4.4");//"45.33.17.123");
+            Lookup.setDefaultResolver(new ExtendedResolver(new Resolver[]{
+                    CVFirstResolver, CVSecondResolver }));
+                    */
+
+            Lookup lookup = new Lookup(domain);
+
+            //long time1 = System.currentTimeMillis();
+            lookup.run();
+            //long time2 = System.currentTimeMillis();
+            if (lookup.getResult() == Lookup.SUCCESSFUL) {
+                if (lookup.getAnswers()[0].rdataToString().contains("45.32.203.129")) {
+                    /*AlertDialog.Builder builder =
+                            new AlertDialog.Builder(getActivity(), R.style.AlertDialogTheme);
+                                 builder.setMessage("block" + " time:" + (time2-time1))
+                            .setCancelable(true);
+                    builder.create();
+                    builder.show();*/
+                    return true;
+                } else {
+                    /*AlertDialog.Builder builder =
+                            new AlertDialog.Builder(getActivity(), R.style.AlertDialogTheme);
+                    builder.setMessage(lookup.getAnswers()[0].rdataToString() + " time:" + (time2-time1))
+                            .setCancelable(true);
+                    builder.create();
+                    builder.show();*/
+                    return false;
+                }
+                /*
+                AlertDialog.Builder builder =
+                        new AlertDialog.Builder(getActivity(), R.style.AlertDialogTheme);
+                builder.setMessage(lookup.getAnswers()[0].rdataToString())
+                        .setCancelable(true);
+                builder.create();
+                builder.show();*/
+            } else {
+                /*AlertDialog.Builder builder =
+                        new AlertDialog.Builder(getActivity(), R.style.AlertDialogTheme);
+                builder.setMessage( "didn't work: " + domain)
+                        .setCancelable(true);
+                builder.create();
+                builder.show();*/
+                return false;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+
+            /*AlertDialog.Builder builder =
+                    new AlertDialog.Builder(getActivity(), R.style.AlertDialogTheme);
+            builder.setMessage("crash: "+e.getMessage())
+                    .setCancelable(true);
+            builder.create();
+            builder.show();*/
+
+        }
+        ////
+        /*AlertDialog.Builder builder =
+                new AlertDialog.Builder(getActivity(), R.style.AlertDialogTheme);
+        builder.setMessage("crash on DNS lookup!")
+                .setCancelable(true);
+        builder.create();
+        builder.show();*/
+        return false;
+        /*if (url.contains("bing")) {
+            return true;
+        } else {
+            return false;
+        }*/
     }
 
     /**

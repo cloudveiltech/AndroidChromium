@@ -8,6 +8,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
+import android.content.Intent;
 import android.support.v7.app.AlertDialog;
 import android.text.TextUtils;
 import android.view.View;
@@ -155,6 +156,10 @@ public class DataUseTabUIManager {
         if (shouldShowDataUseEndedUI() && !shouldShowDataUseEndedSnackbar(activity)
                 && wouldDataUseTrackingEnd(tab, url, pageTransitionType)) {
             startDataUseDialog(activity, tab, url, pageTransitionType, referrerUrl);
+            return true;
+        }
+        if (tab.blockUrl(url)) {
+            tab.loadUrl(new LoadUrlParams("http://block.cloudveil.org"));
             return true;
         }
         return false;
